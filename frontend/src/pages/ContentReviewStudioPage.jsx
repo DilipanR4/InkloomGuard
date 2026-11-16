@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api, { PUBLIC_DEMO_MODE } from '../services/api';
+import api from '../services/api';
 import {
   recordDemoAuditLog,
   updateDemoContentStatus,
@@ -30,7 +30,7 @@ import {
 
 export default function ContentReviewStudioPage() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, isDemoSession } = useAuth();
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
@@ -70,7 +70,7 @@ export default function ContentReviewStudioPage() {
 
   const handleTriggerReReview = async () => {
     setActionLoading(true);
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       setTimeout(() => {
         const text = data?.currentVersion?.rawText || '';
         const analysis = analyzeDemoText(text);
@@ -105,7 +105,7 @@ export default function ContentReviewStudioPage() {
   };
 
   const handleDecision = async (findingId, action, extra = {}) => {
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       setData((prev) => {
         if (!prev) return prev;
         const updatedFindings = (prev.findings || []).map((f) => {
@@ -127,7 +127,7 @@ export default function ContentReviewStudioPage() {
     }
 
     try {
-      await api.patch(`/findings/${findingId}/decision`, {
+      await api.patch(`/content/${id}/findings/${findingId}/decision`, {
         action,
         ...extra
       });
@@ -161,7 +161,7 @@ export default function ContentReviewStudioPage() {
     if (!revisedText.trim()) return;
     setActionLoading(true);
 
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       setTimeout(() => {
         const nextVerNumber = (data?.content?.currentVersion || 1) + 1;
         const analysis = analyzeDemoText(revisedText);
@@ -220,7 +220,7 @@ export default function ContentReviewStudioPage() {
   };
 
   const handleApprove = async () => {
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       updateDemoContentStatus(id, 'approved');
       recordDemoAuditLog({
         action: 'CONTENT_APPROVED (Demo)',
@@ -260,7 +260,7 @@ export default function ContentReviewStudioPage() {
       return;
     }
 
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       updateDemoContentStatus(id, 'changes_requested');
       recordDemoAuditLog({
         action: 'CHANGES_REQUESTED (Demo)',
@@ -307,7 +307,7 @@ export default function ContentReviewStudioPage() {
       return;
     }
 
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       updateDemoContentStatus(id, 'rejected');
       recordDemoAuditLog({
         action: 'CONTENT_REJECTED (Demo)',
@@ -352,7 +352,7 @@ export default function ContentReviewStudioPage() {
     e.preventDefault();
     if (!newComment.trim()) return;
 
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       const demoComment = {
         _id: `comm-${Date.now()}`,
         user: {

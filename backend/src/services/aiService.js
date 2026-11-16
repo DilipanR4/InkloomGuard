@@ -4,6 +4,11 @@ const Terminology = require('../models/Terminology');
 const ApprovedFact = require('../models/ApprovedFact');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const getServiceAuthHeaders = () => {
+  const token = process.env.AI_SERVICE_TOKEN?.trim();
+  if (!token) throw new Error('AI_SERVICE_TOKEN is required for backend-to-AI requests.');
+  return { Authorization: `Bearer ${token}` };
+};
 
 // Unapproved health, curative, stamina, vitality, and medical claim patterns
 const UNSAFE_HEALTH_PATTERNS = /\b(vitality|natural\s+vitality|stamina|cures?|curing|curative|prevents?|preventing|disease|illness|medicinal|therapeutic|miracle\s+cure|instant\s+energy|energy\s+boost|boosts?\s+(?:your\s+)?immunity)\b/i;
@@ -111,7 +116,10 @@ const syncAiKnowledgeBase = async () => {
       }))
     };
 
-    const res = await axios.post(`${AI_SERVICE_URL}/v1/index`, payload, { timeout: 10000 });
+    const res = await axios.post(`${AI_SERVICE_URL}/v1/index`, payload, {
+      timeout: 10000,
+      headers: getServiceAuthHeaders()
+    });
     return res.data;
   } catch (error) {
     console.warn('[AI Service Sync Notice]', error.message);
@@ -168,7 +176,7 @@ const requestAiReview = async ({ contentId, versionNumber, text, contentType }) 
   try {
     const response = await axios.post(`${AI_SERVICE_URL}/v1/review`, payload, {
       timeout: 30000,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...getServiceAuthHeaders() }
     });
 
     if (response.data && response.data.findings) {

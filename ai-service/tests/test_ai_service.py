@@ -1,3 +1,4 @@
+import os
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -7,7 +8,7 @@ from app.retrieval.vector_store import VectorIndex
 from app.validators.finding_validator import FindingValidator
 from app.schemas.review import FindingItem
 
-client = TestClient(app)
+client = TestClient(app, headers={"Authorization": f"Bearer {os.environ['AI_SERVICE_TOKEN']}"})
 
 def test_health_check():
     response = client.get("/health")
@@ -16,6 +17,21 @@ def test_health_check():
     assert data["status"] == "healthy"
     assert data["brand_identity"] == "InkloomGuard"
     assert data["domain"] == "https://inkloomguard.xyz"
+
+@pytest.mark.parametrize("submitted_text", ["", " \t\r\n"])
+def test_review_rejects_empty_content(submitted_text):
+    response = client.post("/v1/review", json={
+        "content_id": "empty-content-test",
+        "submitted_text": submitted_text,
+    })
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Submitted content text cannot be empty."
+
+def test_review_requires_submitted_text():
+    response = client.post("/v1/review", json={"content_id": "missing-content-test"})
+
+    assert response.status_code == 422
 
 def test_preprocessor_pii_redaction():
     sample_text = "Contact Priya at priya.sharma@freshplus.io or call +91-98765-43210 for details."

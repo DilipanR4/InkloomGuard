@@ -5,7 +5,7 @@
   "scripts": {
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
-    "seed": "npm --prefix backend run seed",
+    "seed:dev": "npm --prefix backend run seed:dev",
     "test:backend": "npm --prefix backend test",
     "test:ai": "cd ai-service && .\\venv\\Scripts\\pytest tests",
     "build:frontend": "npm --prefix frontend run build"

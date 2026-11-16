@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from app.main import app
 from fastapi.testclient import TestClient
 
-client = TestClient(app)
+client = TestClient(app, headers={"Authorization": f"Bearer {os.environ['AI_SERVICE_TOKEN']}"})
 
 KNOWLEDGE_PAYLOAD = {
     "guidelines": [

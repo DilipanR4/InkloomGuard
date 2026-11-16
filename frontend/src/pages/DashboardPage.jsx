@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { loadDashboardData } from '../services/dashboardData';
 import {
   FileText,
   CheckCircle2,
@@ -25,12 +26,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [overviewRes, contentRes] = await Promise.all([
-          api.get('/analytics/overview'),
-          api.get('/content?limit=6')
-        ]);
-        setStats(overviewRes.data.stats);
-        setSubmissions(contentRes.data.contents || []);
+        const { stats: dashboardStats, submissions: dashboardSubmissions } =
+          await loadDashboardData(api, user?.role);
+        setStats(dashboardStats);
+        setSubmissions(dashboardSubmissions);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -39,7 +38,7 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user?.role]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -105,7 +104,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div data-tour="kpi-grid" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {stats && <div data-tour="kpi-grid" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
           <p className="text-xs font-medium text-slate-500">Total Submissions</p>
           <p className="text-2xl font-bold text-slate-900">{stats?.totalSubmissions || 0}</p>
@@ -129,7 +128,7 @@ export default function DashboardPage() {
           <p className="text-2xl font-bold text-brand-600">{stats?.averageGovernanceScore || 85}<span className="text-xs font-normal text-slate-400">/100</span></p>
           <p className="text-[11px] text-brand-600/80 font-medium">Brand health index</p>
         </div>
-      </div>
+      </div>}
 
       {/* Role-Specific Focus Section */}
       {user?.role === 'manager' && (

@@ -3,6 +3,20 @@ const mongoose = require('mongoose');
 const app = require('../server');
 const User = require('../models/User');
 const auditLogger = require('../utils/auditLogger');
+const { randomBytes } = require('node:crypto');
+
+function requireTestPassword(name) {
+  const password = process.env[name];
+  if (!password) {
+    throw new Error(`${name} is required for isolated database-backed tests.`);
+  }
+  return password;
+}
+const testPasswords = {
+  creator: requireTestPassword('TEST_CREATOR_PASSWORD'),
+  reviewer: requireTestPassword('TEST_REVIEWER_PASSWORD'),
+  manager: requireTestPassword('TEST_MANAGER_PASSWORD'),
+};
 
 let validToken;
 
@@ -14,7 +28,7 @@ beforeAll(async () => {
   // Pre-fetch a valid token
   const res = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+    .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
   validToken = res.body.token;
 });
 
@@ -27,7 +41,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
   test('Valid creator login returns 200, JWT token, and correct user role', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+      .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -40,7 +54,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
   test('Valid reviewer login returns 200, JWT token, and reviewer role', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'reviewer@freshplus.io', password: 'Reviewer123!' });
+      .send({ email: 'reviewer@freshplus.io', password: testPasswords.reviewer });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -52,7 +66,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
   test('Valid manager login returns 200, JWT token, and manager role', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'manager@freshplus.io', password: 'Manager123!' });
+      .send({ email: 'manager@freshplus.io', password: testPasswords.manager });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -64,7 +78,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
   test('Login without any Authorization header succeeds cleanly', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+      .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -76,7 +90,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .set('Authorization', staleToken)
-      .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+      .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -91,8 +105,8 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
       .send({
         name: 'Test Candidate',
         email: testEmail,
-        password: 'Password123!',
-        role: 'creator',
+        password: randomBytes(32).toString('hex'),
+        role: 'manager',
         organization: 'FreshPlus Global'
       });
 
@@ -100,6 +114,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.token).toBeDefined();
     expect(res.body.user.email).toBe(testEmail);
+    expect(res.body.user.role).toBe('creator');
 
     // Clean up created test user
     await User.deleteOne({ email: testEmail });
@@ -109,11 +124,26 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
   test('Invalid password returns 401 and does not hang', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'creator@freshplus.io', password: 'WrongPassword123!' });
+      .send({ email: 'creator@freshplus.io', password: randomBytes(32).toString('hex') });
 
     expect(res.status).toBe(401);
     expect(res.body.success).toBe(false);
     expect(res.body.message).toMatch(/invalid email or password/i);
+  });
+
+  test('Unknown email returns 401', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'not-a-user@invalid.test', password: randomBytes(32).toString('hex') });
+
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+  });
+
+  test('Empty credentials return 400', async () => {
+    const res = await request(app).post('/api/auth/login').send({ email: '', password: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   // 8. Protected endpoints still require authentication
@@ -143,7 +173,7 @@ describe('InkloomGuard - Production Login Fix Verification', () => {
 
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+      .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

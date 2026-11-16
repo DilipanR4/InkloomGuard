@@ -1,4 +1,29 @@
 require('dotenv').config();
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET?.trim()) {
+  throw new Error('JWT_SECRET is required when NODE_ENV=production. Set a unique secret before starting the backend.');
+}
+if (process.env.NODE_ENV === 'production' && !process.env.MONGO_URI?.trim()) {
+  throw new Error('MONGO_URI is required when NODE_ENV=production. Configure the production MongoDB connection before starting the backend.');
+}
+if (process.env.NODE_ENV === 'production' && !process.env.AI_SERVICE_TOKEN?.trim()) {
+  throw new Error('AI_SERVICE_TOKEN is required when NODE_ENV=production. Configure the shared AI-service credential before starting the backend.');
+}
+if (process.env.NODE_ENV === 'production') {
+  const aiServiceUrl = process.env.AI_SERVICE_URL?.trim();
+  let parsedAiServiceUrl;
+  try {
+    parsedAiServiceUrl = new URL(aiServiceUrl);
+  } catch {
+    throw new Error('AI_SERVICE_URL must be an absolute URL for the deployed AI service.');
+  }
+  const hostname = parsedAiServiceUrl.hostname.replace(/\.$/, '').toLowerCase();
+  if (!['http:', 'https:'].includes(parsedAiServiceUrl.protocol) ||
+      ['localhost', '127.0.0.1', '[::1]'].includes(hostname)) {
+    throw new Error('AI_SERVICE_URL must point to the deployed AI service, not localhost.');
+  }
+}
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -35,11 +60,8 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .map(o => o.trim())
   .filter(Boolean);
 
-// Always allow official domains
+// Production origins; local origins are allowed only outside production.
 const standardOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
   'https://inkloomguard.xyz',
   'https://www.inkloomguard.xyz'
 ];
@@ -48,10 +70,12 @@ app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (like mobile apps, curl, postman)
     if (!origin) return callback(null, true);
-    if (standardOrigins.includes(origin) || allowedOrigins.includes(origin) || origin.endsWith('.inkloomguard.xyz') || origin.includes('vercel.app')) {
+    const isLocalDevelopmentOrigin = process.env.NODE_ENV !== 'production' &&
+      /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+    if (standardOrigins.includes(origin) || allowedOrigins.includes(origin) || isLocalDevelopmentOrigin) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in dev to avoid CORS blocking during demos
+    return callback(new Error('Origin is not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

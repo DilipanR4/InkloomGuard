@@ -1,5 +1,6 @@
 const Finding = require('../models/Finding');
 const { logAudit } = require('../utils/auditLogger');
+const { findAuthorizedContent } = require('../middleware/contentAccess');
 
 // @desc    Get findings for a specific content version
 // @route   GET /api/content/:id/findings
@@ -10,7 +11,7 @@ const getFindings = async (req, res, next) => {
     const versionNum = version ? parseInt(version) : 1;
 
     const findings = await Finding.find({
-      contentId: req.params.id,
+      contentId: req.content._id,
       versionNumber: versionNum
     }).sort({ severity: 1 });
 
@@ -21,10 +22,21 @@ const getFindings = async (req, res, next) => {
 };
 
 // @desc    Record human decision on a finding (Accept, Edit, or Dismiss with reason)
-// @route   PATCH /api/findings/:id/decision
+// @route   PATCH /api/content/:id/findings/:findingId/decision
+// @route   PATCH /api/findings/:id/decision (legacy, requires body.contentId)
 // @access  Private (Creator, Reviewer, Manager)
 const updateFindingDecision = async (req, res, next) => {
   try {
+    const contentId = req.params.findingId ? req.params.id : req.body.contentId;
+    if (!contentId) {
+      return res.status(400).json({ success: false, message: 'Content ID is required' });
+    }
+
+    const content = req.content || await findAuthorizedContent(contentId, req.user);
+    if (!content) {
+      return res.status(404).json({ success: false, message: 'Content not found' });
+    }
+
     const { action, dismissalReason, editedRewrite } = req.body;
 
     if (!['accepted', 'edited', 'dismissed', 'pending'].includes(action)) {
@@ -48,7 +60,10 @@ const updateFindingDecision = async (req, res, next) => {
       });
     }
 
-    const finding = await Finding.findById(req.params.id);
+    const finding = await Finding.findOne({
+      _id: req.params.findingId || req.params.id,
+      contentId: content._id
+    });
     if (!finding) {
       return res.status(404).json({ success: false, message: 'Finding not found' });
     }

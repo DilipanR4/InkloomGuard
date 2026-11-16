@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api, { PUBLIC_DEMO_MODE } from '../services/api';
+import api from '../services/api';
 import {
   BookOpen,
   PlusCircle,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function BrandKnowledgePage() {
-  const { user } = useAuth();
+  const { user, isDemoSession } = useAuth();
   const [activeTab, setActiveTab] = useState('guidelines'); // 'guidelines' | 'regulatory' | 'products' | 'terminology' | 'assets'
   const [guidelines, setGuidelines] = useState([]);
   const [regulatory, setRegulatory] = useState([]);
@@ -95,7 +95,7 @@ export default function BrandKnowledgePage() {
 
   const handleCreateGuideline = async (e) => {
     e.preventDefault();
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       alert('Demo Mode (Read-Only): Adding guidelines is disabled to preserve baseline demo data.');
       setShowAddModal(false);
       return;
@@ -112,7 +112,7 @@ export default function BrandKnowledgePage() {
 
   const handleCreateTerminology = async (e) => {
     e.preventDefault();
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       alert('Demo Mode (Read-Only): Adding terminology rules is disabled to preserve baseline demo data.');
       setShowAddModal(false);
       return;
@@ -129,7 +129,7 @@ export default function BrandKnowledgePage() {
 
   const handleCreateFact = async (e) => {
     e.preventDefault();
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       alert('Demo Mode (Read-Only): Adding approved facts is disabled to preserve baseline demo data.');
       setShowAddModal(false);
       return;
@@ -145,7 +145,7 @@ export default function BrandKnowledgePage() {
   };
 
   const handleDeleteItem = async (endpoint, id) => {
-    if (PUBLIC_DEMO_MODE) {
+    if (isDemoSession) {
       alert('Demo Mode (Read-Only): Record deletion is disabled in demo mode.');
       return;
     }
@@ -159,13 +159,13 @@ export default function BrandKnowledgePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 max-w-full">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-2">
-            <BookOpen className="w-6 h-6 text-brand-600" />
-            <span>Brand Knowledge & Regulatory Library</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-2 flex-wrap">
+            <BookOpen className="w-6 h-6 text-brand-600 shrink-0" />
+            <span className="break-words">Brand Knowledge & Regulatory Library</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Ground-truth rules, official statutory regulations (FSSAI, ASCI, CCPA), and approved product facts.
@@ -175,7 +175,7 @@ export default function BrandKnowledgePage() {
         {isManager && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 shadow-xs transition-colors self-start sm:self-auto"
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-semibold hover:bg-brand-700 shadow-xs transition-colors self-start sm:self-auto shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>
@@ -186,8 +186,8 @@ export default function BrandKnowledgePage() {
       </div>
 
       {/* Tabs & Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center space-x-1 overflow-x-auto pb-1 sm:pb-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs min-w-0">
+        <div className="flex items-center space-x-1.5 overflow-x-auto min-w-0 pb-1 lg:pb-0 scrollbar-none">
           {[
             { id: 'guidelines', label: 'Brand Guidelines', icon: ShieldCheck },
             { id: 'regulatory', label: 'Regulatory Standards (FSSAI/ASCI/CCPA)', icon: Scale },
@@ -200,20 +200,20 @@ export default function BrandKnowledgePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors shrink-0 ${
                   activeTab === tab.id
                     ? 'bg-slate-900 text-white font-semibold shadow-2xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span>{tab.label}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="relative w-full sm:w-60">
+        <div className="relative w-full lg:w-64 shrink-0">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
@@ -227,7 +227,7 @@ export default function BrandKnowledgePage() {
 
       {/* Tab 1: Internal Brand Guidelines */}
       {activeTab === 'guidelines' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-0">
           {loading ? (
             <div className="p-12 flex justify-center">
               <div className="w-7 h-7 border-3 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
@@ -237,19 +237,19 @@ export default function BrandKnowledgePage() {
               {guidelines
                 .filter(g => g.title.toLowerCase().includes(searchTerm.toLowerCase()) || g.description.toLowerCase().includes(searchTerm.toLowerCase()) || g.guidelineId.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((g) => (
-                  <div key={g._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+                  <div key={g._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200 shrink-0">
                           {g.guidelineId}
                         </span>
-                        <h3 className="font-bold text-slate-900 text-sm">{g.title}</h3>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase bg-slate-100 text-slate-700">
+                        <h3 className="font-bold text-slate-900 text-sm break-words">{g.title}</h3>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase bg-slate-100 text-slate-700 shrink-0">
                           {g.category}
                         </span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                      <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
+                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0 ${
                           g.severity === 'high' ? 'bg-rose-100 text-rose-800' : g.severity === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
                         }`}>
                           {g.severity} severity
@@ -265,8 +265,8 @@ export default function BrandKnowledgePage() {
                         )}
                       </div>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed font-sans">{g.description}</p>
-                    <div className="flex items-center space-x-4 text-[11px] text-slate-400 pt-1">
+                    <p className="text-xs text-slate-600 leading-relaxed font-sans break-words">{g.description}</p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 pt-1">
                       <span>Status: <strong className="text-emerald-600 uppercase font-semibold">{g.status}</strong></span>
                       <span>Version: v{g.version}</span>
                       <span>Scope: Internal Brand Policy</span>
@@ -280,67 +280,67 @@ export default function BrandKnowledgePage() {
 
       {/* Tab 2: Regulatory Standards (FSSAI / ASCI / CCPA) */}
       {activeTab === 'regulatory' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-0">
           {loading ? (
             <div className="p-12 flex justify-center">
               <div className="w-7 h-7 border-3 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
-              <div className="p-4 bg-amber-50/60 border-b border-amber-200/70 text-xs text-amber-900 flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Scale className="w-4 h-4 text-amber-700" />
-                  <span>
+              <div className="p-4 bg-amber-50/60 border-b border-amber-200/70 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                <div className="flex items-start sm:items-center space-x-2 min-w-0 flex-1">
+                  <Scale className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
+                  <span className="leading-relaxed break-words">
                     <strong>Statutory Regulatory Knowledge:</strong> Traceable clauses from FSSAI, ASCI, and CCPA governing fruit juice advertising, health claims, and influencer promotions in India.
                   </span>
                 </div>
-                <span className="text-[11px] text-amber-800 font-semibold uppercase">Official Sources</span>
+                <span className="text-[11px] text-amber-800 font-semibold uppercase shrink-0 self-start sm:self-auto">Official Sources</span>
               </div>
 
               {regulatory
                 .filter(r => r.title.toLowerCase().includes(searchTerm.toLowerCase()) || r.description.toLowerCase().includes(searchTerm.toLowerCase()) || r.guidelineId.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((r) => (
-                  <div key={r._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                  <div key={r._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2.5 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
                           {r.guidelineId}
                         </span>
-                        <h3 className="font-bold text-slate-900 text-sm">{r.title}</h3>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-900 text-white">
+                        <h3 className="font-bold text-slate-900 text-sm break-words">{r.title}</h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-900 text-white shrink-0">
                           {r.regulatoryBody}
                         </span>
                       </div>
-                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded shrink-0 self-start sm:self-auto ${
                         r.severity === 'high' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                       }`}>
                         {r.severity} severity
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-700 leading-relaxed font-sans">{r.description}</p>
+                    <p className="text-xs text-slate-700 leading-relaxed font-sans break-words">{r.description}</p>
 
-                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
-                      <p className="text-slate-600 font-medium">
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2 text-xs min-w-0">
+                      <p className="text-slate-600 font-medium break-words">
                         <strong>Verified Legal Clause:</strong> {r.sourceClause}
                       </p>
                       {r.supportedRequirement && (
-                        <p className="text-slate-600">
+                        <p className="text-slate-600 break-words leading-relaxed">
                           <strong>Supported Requirement:</strong> {r.supportedRequirement}
                         </p>
                       )}
                       {r.applicability && (
-                        <p className="text-slate-500 text-[11px]">
+                        <p className="text-slate-500 text-[11px] break-words">
                           <strong>Applicability:</strong> {r.applicability}
                         </p>
                       )}
-                      <div className="flex items-center justify-between pt-1 text-[11px] border-t border-slate-200/60">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] border-t border-slate-200/60 min-w-0">
                         <span className="text-slate-400">Effective: {r.version} {r.verificationDate ? `• Verified ${r.verificationDate}` : ''}</span>
                         <a
                           href={r.sourceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center space-x-1"
+                          className="text-brand-600 hover:text-brand-700 font-semibold inline-flex items-center space-x-1 shrink-0"
                         >
                           <span>Official Gazette / Law Source</span>
                           <ExternalLink className="w-3 h-3 ml-0.5" />
@@ -356,33 +356,33 @@ export default function BrandKnowledgePage() {
 
       {/* Tab 3: Products Catalogue & Approved Facts */}
       {activeTab === 'products' && (
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {/* Fictional Product Catalogue Section */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-0">
+            <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/70 min-w-0">
               <div className="flex items-center space-x-2">
-                <Package className="w-4 h-4 text-brand-600" />
+                <Package className="w-4 h-4 text-brand-600 shrink-0" />
                 <h3 className="text-sm font-bold text-slate-900">FreshPlus Product Catalogue</h3>
               </div>
-              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 shrink-0 self-start sm:self-auto">
                 Fictional FMCG Lineup for Demo
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 min-w-0">
               {products.map((p) => (
-                <div key={p._id} className="p-5 space-y-2 hover:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
+                <div key={p._id} className="p-5 space-y-2 hover:bg-slate-50/50 transition-colors min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200 shrink-0">
                       {p.productId}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-500">{p.category}</span>
+                    <span className="text-[11px] font-semibold text-slate-500 shrink-0">{p.category}</span>
                   </div>
-                  <h4 className="font-bold text-slate-900 text-sm">{p.name}</h4>
-                  <p className="text-xs text-slate-600"><strong>Ingredients:</strong> {p.ingredients}</p>
-                  <p className="text-xs text-slate-600"><strong>Nutritional Breakdown:</strong> {p.nutritionPer100ml}</p>
-                  <p className="text-xs text-slate-500"><strong>Packaging Spec:</strong> {p.packaging}</p>
-                  <p className="text-[10px] text-amber-700 italic pt-1">
+                  <h4 className="font-bold text-slate-900 text-sm break-words">{p.name}</h4>
+                  <p className="text-xs text-slate-600 break-words"><strong>Ingredients:</strong> {p.ingredients}</p>
+                  <p className="text-xs text-slate-600 break-words"><strong>Nutritional Breakdown:</strong> {p.nutritionPer100ml}</p>
+                  <p className="text-xs text-slate-500 break-words"><strong>Packaging Spec:</strong> {p.packaging}</p>
+                  <p className="text-[10px] text-amber-700 italic pt-1 break-words">
                     * {p.fictionalDisclaimer}
                   </p>
                 </div>
@@ -391,41 +391,41 @@ export default function BrandKnowledgePage() {
           </div>
 
           {/* Approved Facts Section */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-0">
+            <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/70 min-w-0">
               <div className="flex items-center space-x-2">
-                <FileCheck className="w-4 h-4 text-emerald-600" />
+                <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                 <h3 className="text-sm font-bold text-slate-900">Approved Nutritional & Ingredient Facts</h3>
               </div>
-              <span className="text-xs text-slate-500 font-medium">Grounded Knowledge Retrieval Source</span>
+              <span className="text-xs text-slate-500 font-medium shrink-0">Grounded Knowledge Retrieval Source</span>
             </div>
 
             <div className="divide-y divide-slate-100">
               {facts
                 .filter(f => f.statement.toLowerCase().includes(searchTerm.toLowerCase()) || f.factId.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((f) => (
-                  <div key={f._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <div key={f._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                           {f.factId}
                         </span>
-                        <span className="text-xs font-bold text-slate-700 uppercase">{f.category}</span>
+                        <span className="text-xs font-bold text-slate-700 uppercase shrink-0">{f.category}</span>
                       </div>
                       {isManager && (
                         <button
                           onClick={() => handleDeleteItem('facts', f._id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors shrink-0"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
-                    <p className="text-xs font-medium text-slate-900 leading-relaxed font-sans">"{f.statement}"</p>
-                    <div className="flex flex-col space-y-0.5 text-[11px] text-slate-500">
+                    <p className="text-xs font-medium text-slate-900 leading-relaxed font-sans break-words">"{f.statement}"</p>
+                    <div className="flex flex-col space-y-0.5 text-[11px] text-slate-500 break-words">
                       <span><strong>Document Reference:</strong> {f.sourceDoc}</span>
                       {f.disclaimer && (
-                        <span className="text-amber-700 italic">{f.disclaimer}</span>
+                        <span className="text-amber-700 italic break-words">{f.disclaimer}</span>
                       )}
                     </div>
                   </div>
@@ -437,7 +437,7 @@ export default function BrandKnowledgePage() {
 
       {/* Tab 4: Terminology List */}
       {activeTab === 'terminology' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden min-w-0">
           {loading ? (
             <div className="p-12 flex justify-center">
               <div className="w-7 h-7 border-3 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
@@ -447,36 +447,36 @@ export default function BrandKnowledgePage() {
               {terminology
                 .filter(t => t.preferredTerm.toLowerCase().includes(searchTerm.toLowerCase()) || t.terminologyId.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((t) => (
-                  <div key={t._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                  <div key={t._id} className="p-5 hover:bg-slate-50/70 transition-colors space-y-2 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                           {t.terminologyId}
                         </span>
-                        <span className="font-bold text-slate-900 text-sm">Preferred: "{t.preferredTerm}"</span>
+                        <span className="font-bold text-slate-900 text-sm break-words">Preferred: "{t.preferredTerm}"</span>
                       </div>
                       {isManager && (
                         <button
                           onClick={() => handleDeleteItem('terminology', t._id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors self-start sm:self-auto shrink-0"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-2 text-xs">
-                      <span className="font-semibold text-rose-700">Prohibited Variations:</span>
-                      <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs min-w-0">
+                      <span className="font-semibold text-rose-700 shrink-0">Prohibited Variations:</span>
+                      <div className="flex flex-wrap gap-1 min-w-0">
                         {t.prohibitedTerms?.map((term, i) => (
-                          <span key={i} className="font-mono px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 line-through">
+                          <span key={i} className="font-mono px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 line-through text-[11px] break-all">
                             {term}
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    <p className="text-xs text-slate-600 leading-relaxed font-sans">{t.explanation}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed font-sans break-words">{t.explanation}</p>
                   </div>
                 ))}
             </div>
@@ -486,16 +486,16 @@ export default function BrandKnowledgePage() {
 
       {/* Tab 5: Assets & Palette */}
       {activeTab === 'assets' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-w-0">
           {assets.map((asset) => (
-            <div key={asset._id} className="p-5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-brand-700">{asset.assetId}</span>
-                <span className="text-xs font-semibold text-slate-500">{asset.type}</span>
+            <div key={asset._id} className="p-5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-3 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-xs font-bold text-brand-700 shrink-0">{asset.assetId}</span>
+                <span className="text-xs font-semibold text-slate-500 shrink-0">{asset.type}</span>
               </div>
-              <h3 className="text-sm font-bold text-slate-900">{asset.name}</h3>
-              <div className="p-3 bg-slate-50 rounded-lg text-xs font-mono text-slate-700 overflow-x-auto">
-                <pre>{JSON.stringify(asset.details, null, 2)}</pre>
+              <h3 className="text-sm font-bold text-slate-900 break-words">{asset.name}</h3>
+              <div className="p-3 bg-slate-50 rounded-lg text-xs font-mono text-slate-700 overflow-x-auto min-w-0">
+                <pre className="whitespace-pre-wrap break-all text-[11px]">{JSON.stringify(asset.details, null, 2)}</pre>
               </div>
             </div>
           ))}

@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import GuidedTour from '../components/GuidedTour';
 import { useAuth } from '../context/AuthContext';
-import { PUBLIC_DEMO_MODE } from '../services/api';
 import { ShieldAlert, Sparkles, Lock, Eye, Compass } from 'lucide-react';
 
 export default function AppLayout({ requireAuth = true }) {
-  const { user, isAuthenticated, loading, switchDemoRole, startTour } = useAuth();
+  const { user, isAuthenticated, loading, switchDemoRole, startTour, isDemoSession } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('inkloom_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('inkloom_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -30,8 +40,8 @@ export default function AppLayout({ requireAuth = true }) {
       {/* Interactive Guided Tour Overlay */}
       {isAuthenticated && <GuidedTour />}
 
-      {/* Requirement 8: Visible Public Demo Mode Banner */}
-      {PUBLIC_DEMO_MODE && (
+      {/* Requirement 8: Visible Public Demo Mode Banner (Only displayed during Demo Sessions) */}
+      {isDemoSession && (
         <aside aria-label="Demo Mode Indicator" className="bg-slate-900 border-b border-amber-500/50 text-amber-200 px-4 py-2 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 shadow-xs">
           <div className="flex items-center space-x-2">
             <span className="flex h-2 w-2 relative">
@@ -105,10 +115,15 @@ export default function AppLayout({ requireAuth = true }) {
         </aside>
       )}
 
-      <Navbar />
-      <div className="flex flex-1">
-        {isAuthenticated && <Sidebar />}
-        <main className="flex-1 p-4 lg:p-8 max-w-7xl mx-auto w-full">
+      <Navbar onToggleSidebar={toggleSidebar} isSidebarCollapsed={sidebarCollapsed} />
+      <div className="flex flex-1 min-w-0 w-full relative">
+        {isAuthenticated && (
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
+          />
+        )}
+        <main className="flex-1 min-w-0 p-4 lg:p-8 max-w-7xl mx-auto w-full transition-all duration-300">
           <Outlet />
         </main>
       </div>

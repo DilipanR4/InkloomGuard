@@ -127,18 +127,10 @@ const getContents = async (req, res, next) => {
 // @access  Private
 const getContentById = async (req, res, next) => {
   try {
-    const content = await Content.findById(req.params.id)
-      .populate('creator', 'name email role')
-      .populate('reviewedBy', 'name email role');
-
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
-    }
-
-    // Role check: creators can only access their own content unless reviewer or manager
-    if (req.user.role === 'creator' && content.creator._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Access denied to this submission' });
-    }
+    const content = await req.content.populate([
+      { path: 'creator', select: 'name email role' },
+      { path: 'reviewedBy', select: 'name email role' }
+    ]);
 
     const currentVersionDoc = await ContentVersion.findOne({
       contentId: content._id,
@@ -176,10 +168,7 @@ const getContentById = async (req, res, next) => {
 // @access  Private
 const triggerReview = async (req, res, next) => {
   try {
-    const content = await Content.findById(req.params.id);
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
-    }
+    const content = req.content;
 
     const versionDoc = await ContentVersion.findOne({
       contentId: content._id,
@@ -258,15 +247,7 @@ const triggerReview = async (req, res, next) => {
 const submitRevision = async (req, res, next) => {
   try {
     const { rawText, changeNotes, autoReview } = req.body;
-    const content = await Content.findById(req.params.id);
-
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
-    }
-
-    if (req.user.role === 'creator' && content.creator.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to edit this submission' });
-    }
+    const content = req.content;
 
     const nextVersionNumber = content.currentVersion + 1;
 
@@ -345,8 +326,7 @@ const submitRevision = async (req, res, next) => {
 const compareVersions = async (req, res, next) => {
   try {
     const { v1, v2 } = req.query;
-    const content = await Content.findById(req.params.id);
-    if (!content) return res.status(404).json({ success: false, message: 'Content not found' });
+    const content = req.content;
 
     const ver1 = await ContentVersion.findOne({ contentId: content._id, versionNumber: parseInt(v1) });
     const ver2 = await ContentVersion.findOne({ contentId: content._id, versionNumber: parseInt(v2) });

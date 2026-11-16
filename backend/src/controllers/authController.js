@@ -3,7 +3,7 @@ const User = require('../models/User');
 const { logAudit } = require('../utils/auditLogger');
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'inkloom_guard_super_secret_jwt_key_2026', {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
@@ -13,20 +13,18 @@ const generateToken = (id) => {
 // @access  Public
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, organization, department } = req.body;
+    const { name, email, password, organization, department } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
-    const assignedRole = ['creator', 'reviewer', 'manager'].includes(role) ? role : 'creator';
-
     const user = await User.create({
       name,
       email,
       password,
-      role: assignedRole,
+      role: 'creator',
       organization: organization || 'FreshPlus Global',
       department: department || 'Brand Marketing',
       onboarding: {
@@ -75,11 +73,11 @@ const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }

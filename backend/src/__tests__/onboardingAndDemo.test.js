@@ -2,6 +2,18 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../server');
 
+function requireTestPassword(name) {
+  const password = process.env[name];
+  if (!password) {
+    throw new Error(`${name} is required for isolated database-backed tests.`);
+  }
+  return password;
+}
+const testPasswords = {
+  creator: requireTestPassword('TEST_CREATOR_PASSWORD'),
+  manager: requireTestPassword('TEST_MANAGER_PASSWORD'),
+};
+
 let creatorToken;
 let managerToken;
 
@@ -12,12 +24,12 @@ beforeAll(async () => {
 
   const creatorRes = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+    .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
   creatorToken = creatorRes.body.token;
 
   const managerRes = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'manager@freshplus.io', password: 'Manager123!' });
+    .send({ email: 'manager@freshplus.io', password: testPasswords.manager });
   managerToken = managerRes.body.token;
 });
 

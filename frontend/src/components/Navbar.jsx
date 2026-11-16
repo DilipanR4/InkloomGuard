@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { PUBLIC_DEMO_MODE } from '../services/api';
 import {
   ShieldCheck,
   LogOut,
@@ -10,11 +9,13 @@ import {
   ChevronDown,
   CheckCircle2,
   Compass,
-  Sparkles
+  Sparkles,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 
-export default function Navbar() {
-  const { user, logout, switchDemoRole, startTour } = useAuth();
+export default function Navbar({ onToggleSidebar, isSidebarCollapsed }) {
+  const { user, logout, switchDemoRole, startTour, isDemoSession } = useAuth();
   const navigate = useNavigate();
 
   const handleRoleSwitch = async (role) => {
@@ -28,7 +29,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
   };
 
   const getRoleBadgeColor = (role) => {
@@ -47,7 +48,27 @@ export default function Navbar() {
     <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-4 lg:px-8 flex items-center justify-between shadow-xs">
       {/* Brand & Identity */}
       <div className="flex items-center space-x-3">
-        <Link to="/" className="flex items-center space-x-2.5 group">
+        {user && onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="w-5 h-5 text-brand-600" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+          </button>
+        )}
+
+        <Link
+          to="/"
+          className="flex items-center space-x-2.5 group cursor-pointer"
+          title="Return to Public Landing Page"
+        >
           <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center text-white shadow-sm group-hover:bg-brand-700 transition-colors">
             <ShieldCheck className="w-5 h-5" />
           </div>
@@ -58,7 +79,7 @@ export default function Navbar() {
                 Inkloom AI
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium">Intelligent Brand Governance</p>
+            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">Intelligent Brand Governance</p>
           </div>
         </Link>
 
@@ -86,10 +107,10 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* Role Perspective Quick Switcher */}
-        {user && (
+        {/* Role Perspective Quick Switcher - Displayed exclusively during Demo Sessions */}
+        {user && isDemoSession && (
           <div data-tour="role-switcher" className="flex items-center bg-slate-50 p-1 rounded-lg border border-slate-200">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase px-2 hidden sm:inline">Role:</span>
+            <span className="text-[11px] font-semibold text-slate-500 uppercase px-2 hidden sm:inline">Demo Role:</span>
             <button
               onClick={() => handleRoleSwitch('creator')}
               className={`px-2 py-1 text-xs font-medium rounded transition-all ${
@@ -130,7 +151,18 @@ export default function Navbar() {
         {user ? (
           <div className="flex items-center space-x-3 pl-2 border-l border-slate-200">
             <div className="text-right hidden sm:block">
-              <p className="text-xs font-semibold text-slate-900 leading-tight">{user.name}</p>
+              <div className="flex items-center justify-end space-x-1.5">
+                <p className="text-xs font-semibold text-slate-900 leading-tight">{user.name}</p>
+                {isDemoSession ? (
+                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                    Demo
+                  </span>
+                ) : (
+                  <span className="text-[9px] uppercase font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Real
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-end space-x-1.5 mt-0.5">
                 <span className={`text-[10px] font-medium uppercase px-1.5 py-0.2 rounded-full border ${getRoleBadgeColor(user.role)}`}>
                   {user.role}

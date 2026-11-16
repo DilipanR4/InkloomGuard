@@ -16,7 +16,8 @@ Authorization: Bearer <JWT_TOKEN>
 
 ### `POST /api/auth/register`
 Creates a new account.
-- **Body:** `{ name, email, password, role, organization, department }`
+- **Body:** `{ name, email, password, organization, department }`
+- New accounts always receive the `creator` role. Managers must assign elevated roles.
 - **Response (201):** `{ success: true, token, user }`
 
 ### `POST /api/auth/login`
@@ -118,8 +119,11 @@ Compares two versions for side-by-side audit and diff analysis.
 
 ## 6. Findings & Human Decisions
 
-### `PATCH /api/findings/:id/decision`
+### `PATCH /api/content/:contentId/findings/:findingId/decision`
 Records a human reviewer's action on an AI finding.
+- The finding must belong to the content in `:contentId`.
+- Creators may act only on their own content; Reviewers and Managers may act on content in the review workspace.
+- The legacy `PATCH /api/findings/:id/decision` route requires `contentId` in the body and applies the same ownership and finding-to-content checks.
 - **Body (Accept):** `{ "action": "accepted" }`
 - **Body (Edit):** `{ "action": "edited", "editedRewrite": "Custom phrasing" }`
 - **Body (Dismiss):** `{ "action": "dismissed", "dismissalReason": "Clear documented reason" }`

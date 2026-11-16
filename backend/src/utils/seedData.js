@@ -1,6 +1,6 @@
 require('dotenv').config();
+const { validateSeedEnvironment } = require('./seedSafety');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const User = require('../models/User');
 const Guideline = require('../models/Guideline');
@@ -15,26 +15,9 @@ const AuditLog = require('../models/AuditLog');
 
 const seedData = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/inkloom';
-
-    // Priority 2 Demo Isolation Guard: Never allow unconditional wiping of remote or production databases
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isRemoteDb = mongoUri && !mongoUri.includes('localhost') && !mongoUri.includes('127.0.0.1');
-
-    if (isProduction && process.env.ALLOW_DEMO_SEED !== 'true') {
-      console.error('[Seed Aborted] Refusing to run seed script in production environment without explicit ALLOW_DEMO_SEED=true.');
-      process.exit(1);
-    }
-
-    if (isRemoteDb && process.env.ALLOW_DEMO_SEED !== 'true') {
-      console.error('[Seed Aborted] Target MongoDB is a remote/cloud cluster. To prevent accidental data loss, you must explicitly set ALLOW_DEMO_SEED=true to seed this environment.');
-      process.exit(1);
-    }
-
-    console.log(`[Seed] Connecting to MongoDB: ${mongoUri}...`);
+    const { mongoUri, databaseName, demoPasswords } = validateSeedEnvironment(process.env);
+    console.log('Target environment: ' + process.env.NODE_ENV + '; database: ' + databaseName + ' (localhost).');
     await mongoose.connect(mongoUri);
-
-    console.log('[Seed] Clearing existing demo collections...');
     await Promise.all([
       User.deleteMany({}),
       Guideline.deleteMany({}),
@@ -47,12 +30,10 @@ const seedData = async () => {
       Comment.deleteMany({}),
       AuditLog.deleteMany({})
     ]);
-
-    console.log('[Seed] Creating demo users...');
     const creator = await User.create({
       name: 'Priya Sharma (Creator)',
       email: 'creator@freshplus.io',
-      password: 'Creator123!',
+      password: demoPasswords.creator,
       role: 'creator',
       organization: 'FreshPlus Global',
       department: 'Creative & Social Media',
@@ -62,7 +43,7 @@ const seedData = async () => {
     const reviewer = await User.create({
       name: 'Arjun Mehta (Reviewer)',
       email: 'reviewer@freshplus.io',
-      password: 'Reviewer123!',
+      password: demoPasswords.reviewer,
       role: 'reviewer',
       organization: 'FreshPlus Global',
       department: 'Legal & Compliance',
@@ -72,14 +53,12 @@ const seedData = async () => {
     const manager = await User.create({
       name: 'Rohan Deshmukh (Manager)',
       email: 'manager@freshplus.io',
-      password: 'Manager123!',
+      password: demoPasswords.manager,
       role: 'manager',
       organization: 'FreshPlus Global',
       department: 'Global Brand Governance',
       onboarding: { completed: false, skipped: false, version: 1 }
     });
-
-    console.log('[Seed] Seeding brand guidelines & regulatory knowledge...');
     // Internal Brand Guidelines
     await Guideline.create([
       {
@@ -254,8 +233,6 @@ const seedData = async () => {
         createdBy: manager._id
       }
     ]);
-
-    console.log('[Seed] Seeding terminology rules...');
     await Terminology.create([
       {
         terminologyId: 'TERM-001',
@@ -302,8 +279,6 @@ const seedData = async () => {
         createdBy: manager._id
       }
     ]);
-
-    console.log('[Seed] Seeding approved facts...');
     await ApprovedFact.create([
       {
         factId: 'FACT-001',
@@ -360,8 +335,6 @@ const seedData = async () => {
         createdBy: manager._id
       }
     ]);
-
-    console.log('[Seed] Seeding brand assets...');
     await BrandAsset.create([
       {
         assetId: 'ASSET-001',
@@ -388,8 +361,6 @@ const seedData = async () => {
         createdBy: manager._id
       }
     ]);
-
-    console.log('[Seed] Seeding Submissions...');
     // Submission 1: Social Teaser
     const sub1 = await Content.create({
       title: 'Summer Launch Campaign - Social Teaser',
@@ -767,8 +738,6 @@ const seedData = async () => {
       role: 'reviewer',
       comment: 'REJECTED: Severe statutory non-compliance. Direct medical prevention claims invite heavy regulatory penalties under FSSAI. Do not print.'
     });
-
-    console.log('[Seed] Seeding audit logs...');
     await AuditLog.create([
       {
         user: reviewer._id,
@@ -806,23 +775,13 @@ const seedData = async () => {
         targetId: sub1._id.toString(),
         details: { title: sub1.title, version: 1 }
       }
-    ]);
-
-    console.log('=======================================================');
-    console.log('  INKLOOM AI - Demo Database Seeded Successfully!       ');
-    console.log('=======================================================');
-    console.log('Demo Accounts:');
-    console.log('  Creator:  creator@freshplus.io  / Creator123!');
-    console.log('  Reviewer: reviewer@freshplus.io / Reviewer123!');
-    console.log('  Manager:  manager@freshplus.io  / Manager123!');
-    console.log('=======================================================');
-
-    await mongoose.disconnect();
-    process.exit(0);
-  } catch (error) {
-    console.error('[Seed Error]', error);
-    process.exit(1);
+    ]);    await mongoose.disconnect();
+    console.log('Development seed completed.');
+  } catch {
+    console.error('Seed failed; details are suppressed to protect database credentials.');
+    await mongoose.disconnect().catch(() => {});
+    process.exitCode = 1;
   }
 };
 
-seedData();
+if (require.main === module) seedData();

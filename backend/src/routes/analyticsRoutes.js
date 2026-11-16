@@ -6,9 +6,10 @@ const {
   getRulesAnalytics
 } = require('../controllers/analyticsController');
 const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/rbac');
 
-router.get('/overview', protect, getOverviewAnalytics);
-router.get('/findings', protect, getFindingsAnalytics);
-router.get('/rules', protect, getRulesAnalytics);
+router.get('/overview', protect, authorize('reviewer', 'manager'), getOverviewAnalytics);
+router.get('/findings', protect, authorize('reviewer', 'manager'), getFindingsAnalytics);
+router.get('/rules', protect, authorize('reviewer', 'manager'), getRulesAnalytics);
 
 module.exports = router;

@@ -37,23 +37,14 @@ Inkloom AI solves this by:
 
 ---
 
-## 👥 Seeded Demo Accounts (One-Click Judge Sign-In)
+## Local Demo Data
 
-For instant evaluation, the platform comes pre-seeded with three distinct roles for the fictional brand **FreshPlus**:
-
-| Role | Email | Password | Primary Workflow |
-|---|---|---|---|
-| **Creator** | `creator@freshplus.io` | `Creator123!` | Drafts content, inspects highlights, accepts/edits suggestions, submits revisions |
-| **Reviewer** | `reviewer@freshplus.io` | `Reviewer123!` | Audits AI citations, collaborates with comments, requests changes, issues final approval |
-| **Manager** | `manager@freshplus.io` | `Manager123!` | Manages guidelines, terminology & facts, monitors analytics, oversees user roles |
-
-*Judges can also use the **Role Switcher** in the top navigation bar to switch between roles on the fly without logging out!*
-
+Demo data is not created automatically. The optional seed command is destructive and is restricted to a local development database. It requires separate destructive-mode confirmation and three unique, operator-supplied demo passwords. Never use it with production or remote databases.
 ---
 
 ## 🧪 Master Prompt Test Scenario
 
-The system includes pre-seeded test data matching the exact hackathon prompt scenario:
+The optional local seed dataset includes test data matching the hackathon prompt scenario:
 
 **Submitted Copy:**
 > *"Fresh+ cures fatigue instantly! India's No. 1 juice is finally here. Buy now!!!"*
@@ -72,7 +63,7 @@ The system includes pre-seeded test data matching the exact hackathon prompt sce
 - **Backend:** Node.js, Express.js, MongoDB / Mongoose, JWT authentication, bcryptjs, RBAC middleware.
 - **AI Service:** Python 3.13, FastAPI, Pydantic, Scikit-learn (TF-IDF vector retrieval), Google Gemini API (`gemini-1.5-flash`), Pytest.
 - **Testing:** Jest + Supertest (Backend), Pytest (AI Microservice).
-- **Deployment Ready:** Vercel (Frontend), Render (Backend & AI Service), MongoDB Atlas (Database).
+- **Deployment Ready:** Vercel (Frontend), Railway (Backend & AI Service), MongoDB Atlas (Database). Existing Render services remain backups.
 
 ---
 
@@ -113,9 +104,10 @@ Create `.env` files in each service directory (see `.env.example` in each folder
 ```env
 PORT=5000
 NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/inkloom
-JWT_SECRET=inkloom_guard_super_secret_jwt_key_2026
+MONGO_URI=mongodb://127.0.0.1:27017/inkloom_dev
+JWT_SECRET=replace_with_a_unique_random_secret
 AI_SERVICE_URL=http://localhost:8000
+AI_SERVICE_TOKEN= # Set a long random value; use the same secret in backend and AI service.
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,https://inkloomguard.xyz,https://www.inkloomguard.xyz
 FRONTEND_URL=https://inkloomguard.xyz
 ```
@@ -124,6 +116,8 @@ FRONTEND_URL=https://inkloomguard.xyz
 ```env
 PORT=8000
 HOST=0.0.0.0
+AI_SERVICE_TOKEN= # Set the same secret as backend; store it only in service environment settings.
+AI_ALLOWED_ORIGINS= # Comma-separated exact browser origins; leave empty if browsers do not call AI directly.
 # Add your Gemini API Key (optional - system includes deterministic fallback)
 GEMINI_API_KEY=""
 BRAND_IDENTITY="InkloomGuard"
@@ -138,13 +132,13 @@ VITE_BRAND_IDENTITY="InkloomGuard"
 VITE_DOMAIN="https://inkloomguard.xyz"
 ```
 
-### 3. Seed Demo Database
+### 3. Seed Local Development Database
 
-```bash
-cd backend
-npm run seed
-```
+The seed operation deletes and recreates local development data. It refuses production environments, remote MongoDB hosts, and database names other than inkloom_dev.
 
+Set NODE_ENV=development, MONGO_URI=mongodb://127.0.0.1:27017/inkloom_dev, SEED_MODE=destructive, and SEED_CONFIRMATION=I_ACCEPT_DESTRUCTIVE_LOCAL_DEV_SEED. Provide separate unique random passwords of at least 32 characters with SEED_CREATOR_PASSWORD, SEED_REVIEWER_PASSWORD, and SEED_MANAGER_PASSWORD; keep these values in an uncommitted local environment file.
+
+From the repository root, run npm run seed:dev. This command is not part of backend startup or deployment.
 ### 4. Run the Services
 
 **Terminal 1 — Backend:**
@@ -193,22 +187,22 @@ cd ai-service
 ## 🌐 Custom Domain & Production Deployment
 
 ### Frontend (Vercel)
-1. Import repository and set root directory to `frontend`.
-2. Add environment variable: `VITE_API_URL=https://api.inkloomguard.xyz/api`.
-3. In Vercel Project Settings → Domains, bind `inkloomguard.xyz` and `www.inkloomguard.xyz`.
-4. DNS: Point `@` (A record) to `76.76.21.21` and `www` (CNAME) to `cname.vercel-dns.com`.
-5. `frontend/vercel.json` and `frontend/public/CNAME` are pre-configured.
+1. Use the existing Vercel project with root directory `frontend`.
+2. Set `VITE_API_URL=https://inkloomguard-production.up.railway.app/api`.
+3. Build with `npm run build` (output directory `dist`). Keep `inkloomguard.xyz` and `www.inkloomguard.xyz` on this project.
 
-### Backend (Render)
-1. Create a Web Service pointing to `backend/`.
+### Backend (Railway)
+1. Use the existing Railway backend service with root directory `backend/`.
 2. Build command: `npm install`. Start command: `npm start`.
-3. Set environment variables (`MONGO_URI`, `JWT_SECRET`, `AI_SERVICE_URL`, `ALLOWED_ORIGINS`).
-4. Custom domain: `api.inkloomguard.xyz`.
+3. Configure `NODE_ENV`, `JWT_SECRET`, `MONGO_URI`, `ALLOWED_ORIGINS`, `AI_SERVICE_URL`, and `AI_SERVICE_TOKEN` in the Railway service variables.
+4. Set `AI_SERVICE_URL=https://inkloomguard-production-21d2c8e2.up.railway.app`. The backend appends `/v1/review` and `/v1/index`.
 
-### AI Service (Render)
-1. Create a Web Service pointing to `ai-service/`.
+### AI Service (Railway)
+1. Use the existing Railway AI service with root directory `ai-service/`.
 2. Build command: `pip install -r requirements.txt`. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-3. Set environment variables (`GEMINI_API_KEY`).
+3. Set `AI_SERVICE_TOKEN` to the same value configured on the backend. `GEMINI_API_KEY` is optional; deterministic fallback remains available. Leave `AI_ALLOWED_ORIGINS` empty when only the backend calls this service.
+
+The existing Render backend and AI services remain backups and are not changed by these instructions.
 
 ---
 

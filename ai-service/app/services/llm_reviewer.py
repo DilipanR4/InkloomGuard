@@ -107,15 +107,14 @@ Return a valid JSON array of findings adhering to this exact schema:
         raw_json = response.text.strip()
         parsed = json.loads(raw_json)
 
-        findings = []
         if isinstance(parsed, list):
-            for item in parsed:
-                findings.append(FindingItem(**item))
-        elif isinstance(parsed, dict) and "findings" in parsed:
-            for item in parsed["findings"]:
-                findings.append(FindingItem(**item))
+            raw_findings = parsed
+        elif isinstance(parsed, dict) and isinstance(parsed.get("findings"), list):
+            raw_findings = parsed["findings"]
+        else:
+            raise ValueError("Gemini response must be a JSON array or an object with a findings array.")
 
-        return findings
+        return [FindingItem(**item) for item in raw_findings]
 
     def _heuristic_fallback_review(
         self,

@@ -21,12 +21,9 @@ import {
   recordDemoAuditLog
 } from './demoData';
 
-// Public Demo Mode flag
-// Set to true to deliver instant grounded demo responses and enforce read-only safety.
-// Easily toggleable via VITE_PUBLIC_DEMO_MODE=false in environment.
-export const PUBLIC_DEMO_MODE = import.meta.env.VITE_PUBLIC_DEMO_MODE !== 'false';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:5000/api' : 'https://inkloomguard-production.up.railway.app/api'
+);
 
 // Helper to provide source-grounded demo data
 const getDemoResponse = (config) => {
@@ -97,8 +94,11 @@ const getDemoResponse = (config) => {
       if (isLoggedOut) {
         return { user: null };
       }
-      const savedRole = localStorage.getItem('inkloom_demo_role') || 'manager';
-      return { user: DEMO_USERS[savedRole] || DEMO_USERS.manager };
+      const savedRole = localStorage.getItem('inkloom_demo_role');
+      if (!savedRole) {
+        return { user: null };
+      }
+      return { user: DEMO_USERS[savedRole] || null };
     }
     return null;
   }
@@ -112,7 +112,7 @@ const getDemoResponse = (config) => {
       } catch (e) {
         body = {};
       }
-      const savedRole = localStorage.getItem('inkloom_demo_role') || 'manager';
+      const savedRole = localStorage.getItem('inkloom_demo_role');
       if (DEMO_USERS[savedRole]) {
         DEMO_USERS[savedRole].onboarding = {
           completed: body.completed !== undefined ? Boolean(body.completed) : DEMO_USERS[savedRole].onboarding?.completed || false,
@@ -176,28 +176,6 @@ const getDemoResponse = (config) => {
         message: 'AI Review completed successfully with source-grounded findings.'
       };
     }
-    if (url.includes('/auth/login')) {
-      let body = {};
-      try {
-        body = typeof config.data === 'string' ? JSON.parse(config.data || '{}') : (config.data || {});
-      } catch (e) {
-        body = {};
-      }
-      const em = (body.email || '').toLowerCase();
-      let matchedRole = 'manager';
-      if (em.includes('creator')) matchedRole = 'creator';
-      else if (em.includes('reviewer')) matchedRole = 'reviewer';
-      else if (em.includes('manager')) matchedRole = 'manager';
-      const userData = DEMO_USERS[matchedRole] || DEMO_USERS.manager;
-      return {
-        success: true,
-        token: 'public-demo-token',
-        user: userData
-      };
-    }
-    if (url.includes('/auth/logout')) {
-      return { success: true, message: 'Logged out in demo mode.' };
-    }
     if (url.includes('/content')) {
       let body = {};
       try {
@@ -220,9 +198,33 @@ const getDemoResponse = (config) => {
   };
 };
 
-// Custom adapter that intercepts all calls when PUBLIC_DEMO_MODE is true
+// Custom adapter that routes demo vs real backend calls
+const fetchAdapter = axios.getAdapter(axios.defaults.adapter);
+
 const demoAdapter = async (config) => {
-  if (PUBLIC_DEMO_MODE) {
+  const url = config.url || '';
+
+  // CRITICAL: Real authentication endpoints MUST ALWAYS hit the real backend API
+  const isAuthEndpoint = (
+    url.includes('/auth/login') ||
+    url.includes('/auth/register')
+  );
+  if (isAuthEndpoint) {
+    return fetchAdapter(config);
+  }
+
+  // Check if current user is in an explicit Real User Session
+  const sessionType = localStorage.getItem('inkloom_session_type');
+  const token = localStorage.getItem('inkloom_token');
+  const isRealSession = sessionType === 'real' || (Boolean(token) && token !== 'public-demo-token');
+
+  // Real authenticated users ALWAYS communicate with the real backend API
+  if (isRealSession) {
+    return fetchAdapter(config);
+  }
+
+  // Simulated API data is available only in an explicitly selected demo session.
+  if (sessionType === 'demo') {
     const demoData = getDemoResponse(config);
     if (demoData) {
       return {
@@ -236,8 +238,7 @@ const demoAdapter = async (config) => {
     }
   }
 
-  // Fallback to real HTTP transport when not in demo mode
-  const fetchAdapter = axios.getAdapter(config.adapter || 'xhr');
+  // Fallback to real HTTP transport
   return fetchAdapter(config);
 };
 
@@ -296,8 +297,12 @@ api.interceptors.response.use(
       );
 
       if (!isLoginOrRegister) {
+        localStorage.setItem('inkloom_demo_logged_out', 'true');
+        localStorage.removeItem('inkloom_session_type');
         localStorage.removeItem('inkloom_token');
         localStorage.removeItem('inkloom_user');
+        localStorage.removeItem('inkloom_demo_role');
+        window.dispatchEvent(new Event('inkloom:unauthorized'));
       }
     }
 

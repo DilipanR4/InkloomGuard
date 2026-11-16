@@ -1,4 +1,4 @@
-const Content = require('../models/Content');
+const Finding = require('../models/Finding');
 const Comment = require('../models/Comment');
 const AuditLog = require('../models/AuditLog');
 const { logAudit } = require('../utils/auditLogger');
@@ -13,9 +13,12 @@ const addComment = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Comment text is required' });
     }
 
-    const content = await Content.findById(req.params.id);
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
+    const content = req.content;
+    if (findingId) {
+      const finding = await Finding.findOne({ _id: findingId, contentId: content._id });
+      if (!finding) {
+        return res.status(404).json({ success: false, message: 'Finding not found' });
+      }
     }
 
     const newComment = await Comment.create({
@@ -54,10 +57,7 @@ const requestChanges = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Reason for requesting changes is required' });
     }
 
-    const content = await Content.findById(req.params.id);
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
-    }
+    const content = req.content;
 
     content.status = 'changes_requested';
     content.reviewedBy = req.user._id;
@@ -98,11 +98,7 @@ const requestChanges = async (req, res, next) => {
 const approveContent = async (req, res, next) => {
   try {
     const { comment } = req.body;
-    const content = await Content.findById(req.params.id);
-
-    if (!content) {
-      return res.status(404).json({ success: false, message: 'Content not found' });
-    }
+    const content = req.content;
 
     // Role check: Creators cannot approve any content
     if (req.user.role === 'creator') {
@@ -157,7 +153,7 @@ const getContentHistory = async (req, res, next) => {
   try {
     const history = await AuditLog.find({
       targetResource: 'Content',
-      targetId: req.params.id
+      targetId: req.content._id.toString()
     }).sort({ createdAt: -1 });
 
     res.json({ success: true, count: history.length, history });

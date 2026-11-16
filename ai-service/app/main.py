@@ -1,11 +1,31 @@
 import os
+import hmac
 import time
-from typing import List, Set, Dict, Any
-from fastapi import FastAPI, HTTPException
+from typing import List, Set, Dict, Any, Optional
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def load_service_token() -> str:
+    token = os.getenv("AI_SERVICE_TOKEN", "").strip()
+    if not token:
+        raise RuntimeError("AI_SERVICE_TOKEN is required to start the AI service.")
+    return token
+
+
+def load_trusted_origins() -> List[str]:
+    origins = [origin.strip() for origin in os.getenv("AI_ALLOWED_ORIGINS", "").split(",") if origin.strip()]
+    if any("*" in origin for origin in origins):
+        raise RuntimeError("AI_ALLOWED_ORIGINS must contain explicit origins; wildcard origins are not allowed.")
+    return origins
+
+
+SERVICE_TOKEN = load_service_token()
+TRUSTED_ORIGINS = load_trusted_origins()
 
 from app.schemas.review import (
     ReviewRequest,
@@ -25,16 +45,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# CORS is disabled for browsers unless exact trusted origins are configured.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=TRUSTED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 llm_reviewer = LLMReviewer()
+bearer_auth = HTTPBearer(auto_error=False)
+
+
+def require_service_auth(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_auth),
+):
+    supplied = credentials.credentials if credentials and credentials.scheme.lower() == "bearer" else ""
+    if not hmac.compare_digest(supplied.encode("utf-8"), SERVICE_TOKEN.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Invalid or missing service credentials.")
 
 @app.get("/")
 @app.get("/health")
@@ -48,7 +77,7 @@ def health_check():
         "indexed_chunks": len(global_vector_index.chunks)
     }
 
-@app.post("/v1/index")
+@app.post("/v1/index", dependencies=[Depends(require_service_auth)])
 def index_knowledge(payload: KnowledgePayload):
     """
     Indexes or updates guidelines and facts into the retrieval vector space.
@@ -63,7 +92,7 @@ def index_knowledge(payload: KnowledgePayload):
         "chunks_count": total_indexed
     }
 
-@app.post("/v1/review", response_model=ReviewResponse)
+@app.post("/v1/review", response_model=ReviewResponse, dependencies=[Depends(require_service_auth)])
 def review_content(request: ReviewRequest):
     """
     End-to-end Brand Governance Review Pipeline:

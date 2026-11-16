@@ -2,6 +2,19 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const app = require('../server');
 
+function requireTestPassword(name) {
+  const password = process.env[name];
+  if (!password) {
+    throw new Error(`${name} is required for isolated database-backed tests.`);
+  }
+  return password;
+}
+const testPasswords = {
+  creator: requireTestPassword('TEST_CREATOR_PASSWORD'),
+  reviewer: requireTestPassword('TEST_REVIEWER_PASSWORD'),
+  manager: requireTestPassword('TEST_MANAGER_PASSWORD'),
+};
+
 let creatorToken;
 let reviewerToken;
 let managerToken;
@@ -15,19 +28,19 @@ beforeAll(async () => {
   // Login as creator
   const creatorRes = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'creator@freshplus.io', password: 'Creator123!' });
+    .send({ email: 'creator@freshplus.io', password: testPasswords.creator });
   creatorToken = creatorRes.body.token;
 
   // Login as reviewer
   const reviewerRes = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'reviewer@freshplus.io', password: 'Reviewer123!' });
+    .send({ email: 'reviewer@freshplus.io', password: testPasswords.reviewer });
   reviewerToken = reviewerRes.body.token;
 
   // Login as manager
   const managerRes = await request(app)
     .post('/api/auth/login')
-    .send({ email: 'manager@freshplus.io', password: 'Manager123!' });
+    .send({ email: 'manager@freshplus.io', password: testPasswords.manager });
   managerToken = managerRes.body.token;
 });
 
@@ -48,6 +61,22 @@ describe('Inkloom AI - Backend API Tests', () => {
     expect(creatorToken).toBeDefined();
     expect(reviewerToken).toBeDefined();
     expect(managerToken).toBeDefined();
+  });
+
+  test('Manager-only endpoints reject a creator and allow a manager', async () => {
+    const creatorUsers = await request(app)
+      .get('/api/auth/users')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    const creatorAudit = await request(app)
+      .get('/api/audit')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    const managerUsers = await request(app)
+      .get('/api/auth/users')
+      .set('Authorization', `Bearer ${managerToken}`);
+
+    expect(creatorUsers.status).toBe(403);
+    expect(creatorAudit.status).toBe(403);
+    expect(managerUsers.status).toBe(200);
   });
 
   test('GET /api/auth/me should return logged-in user profile', async () => {
@@ -108,5 +137,13 @@ describe('Inkloom AI - Backend API Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.stats.totalSubmissions).toBeGreaterThan(0);
     expect(res.body.stats.totalFindings).toBeGreaterThan(0);
+  });
+
+  test('Creator cannot access reviewer and manager analytics endpoints', async () => {
+    const res = await request(app)
+      .get('/api/analytics/overview')
+      .set('Authorization', `Bearer ${creatorToken}`);
+
+    expect(res.status).toBe(403);
   });
 });
